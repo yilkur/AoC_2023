@@ -1,63 +1,78 @@
 const fs = require('fs')
 
-const data = fs.readFileSync('input.txt', 'utf-8')
-const lines = data.trim().split('\n')
-
+const readInput = filename =>
+  fs.readFileSync(filename, 'utf-8').trim().split('\n')
+const lines = readInput('input.txt')
 const height = lines.length
 const width = lines[0].length
 
-const engineSchematic = Array.from({ length: height }, () =>
-  Array.from({ length: width }, () => [])
-)
+const initializeEngineSchematic = (height, width) =>
+  Array.from({ length: height }, () => Array.from({ length: width }, () => []))
 
-const isSymbol = (i, j, num) => {
-  if (!(0 <= i && i < height && 0 <= j && j < width)) {
+const isSymbol = (lines, engineSchematic, i, j, num) => {
+  const item = lines[i]?.[j]
+  const validIndices =
+    0 <= i && i < lines.length && 0 <= j && j < lines[0].length
+
+  if (!validIndices) {
     return false
   }
 
-  if (lines[i][j] === '*') {
+  if (item === '*') {
     engineSchematic[i][j].push(num)
   }
-  return lines[i][j] !== '.' && !isNaN(lines[i][j])
+
+  return item !== '.' && !isNaN(item)
 }
 
-let ans = 0
-
-for (let i = 0; i < height; i++) {
-  let start = 0
+const processLine = (lines, engineSchematic, i) => {
   let j = 0
 
-  while (j < width) {
-    start = j
+  while (j < lines[i].length) {
+    const start = j
     let num = ''
 
-    while (j < width && !isNaN(lines[i][j])) {
+    while (j < lines[i].length && !isNaN(lines[i][j])) {
       num += lines[i][j]
       j++
     }
 
-    if (num === '') {
+    if (num !== '') {
+      num = parseInt(num)
+      isSymbol(lines, engineSchematic, i, start - 1, num) ||
+        isSymbol(lines, engineSchematic, i, j, num)
+
+      for (let k = start - 1; k <= j; k++) {
+        isSymbol(lines, engineSchematic, i - 1, k, num) ||
+          isSymbol(lines, engineSchematic, i + 1, k, num)
+      }
+    } else {
       j++
-      continue
-    }
-
-    num = parseInt(num)
-    isSymbol(i, start - 1, num) || isSymbol(i, j, num)
-
-    for (let k = start - 1; k <= j; k++) {
-      isSymbol(i - 1, k, num) || isSymbol(i + 1, k, num)
     }
   }
 }
+
+const calculateAnswer = (lines, engineSchematic) => {
+  let sum = 0
+
+  for (let i = 0; i < lines.length; i++) {
+    for (let j = 0; j < lines[0].length; j++) {
+      const nums = engineSchematic[i][j]
+
+      if (lines[i][j] === '*' && nums.length === 2) {
+        sum += nums[0] * nums[1]
+      }
+    }
+  }
+
+  return sum
+}
+
+const engineSchematic = initializeEngineSchematic(height, width)
 
 for (let i = 0; i < height; i++) {
-  for (let j = 0; j < width; j++) {
-    const nums = engineSchematic[i][j]
-
-    if (lines[i][j] === '*' && nums.length === 2) {
-      ans += nums[0] * nums[1]
-    }
-  }
+  processLine(lines, engineSchematic, i)
 }
 
-console.log(ans)
+const answer = calculateAnswer(lines, engineSchematic)
+console.log(answer)
